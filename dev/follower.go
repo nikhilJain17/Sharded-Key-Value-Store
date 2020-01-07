@@ -3,7 +3,7 @@ package main
 import (
 	// "html/template"
 	// "io/ioutil"
-	// "log"
+	"log"
 	"net/http"
 	// "regexp"
 	"fmt"
@@ -14,25 +14,47 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getHandler(w http.ResponseWriter, r *http.Request) {
+	/* do some input validation etc here probably */
 	err := r.ParseForm()
 	if err != nil {
-		// log.Fatal(err)
+		log.Fatal(err)
 	}
-	fmt.Println("[get]: ") // log to server console
-	fmt.Printf("%+v\n", r.Form)
-	for key, values := range r.Form {
-		for _, value := range values {
-			fmt.Println(key, value)
+
+	var key string 
+	for formKey, formValues := range r.Form {
+		for _, formVal := range formValues { // @todo make sure length of values is one
+			if string(formKey) == "key" {
+				key = formVal
+			}
 		}
 	}
-	// fmt.Println("===========") 	
-	// fmt.Println(r) 
-	// fmt.Fprintf(w, "get: ")
+	log.Println("[get] key: ", key)
+	
+	/* now get from persistent storage */
 
 }
 
 func putHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "put: ")
+	/* do some input validation etc here probably */
+	err := r.ParseForm()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var key string 
+	var val string
+	for formKey, formValues := range r.Form {
+		for _, formVal := range formValues { // @todo make sure length of values is one
+			if string(formKey) == "key" {
+				key = formVal
+			}
+			if string(formKey) == "value" {
+				val = formVal
+			}
+		}
+	}
+	log.Println("[put] key:", key, ", value:", val)
+
 }
 
 func main() {
