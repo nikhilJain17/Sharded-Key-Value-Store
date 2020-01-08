@@ -119,12 +119,13 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	
 }
 
-func main() {
+func followerInit(f *Follower) {
 
 	/* set up boltdb */
 	var err error
-	db, err = bolt.Open("kvstore.db", 0600, &bolt.Options{Timeout: 2 * time.Second})
-	if err != nil {log.Fatal("error opening boltdb: ", err)}
+	// @todo each client needs it's own db...
+	db, err = bolt.Open(f.DBFilename, 0600, &bolt.Options{Timeout: 2 * time.Second})
+	if err != nil {log.Fatal("error opening boltdb: ", err, "client: ", f)}
 	defer db.Close() // defer is pretty handy
 
 	// hello world handler
@@ -136,5 +137,14 @@ func main() {
 	http.HandleFunc("/get", getHandler)
 	http.HandleFunc("/put", putHandler)
 	http.HandleFunc("/delete", deleteHandler)
-	http.ListenAndServe(":8080", nil)
+
+	http.ListenAndServe(f.URL, nil)
 }
+
+/*
+Some random notes:
+
+- forget using rpc and custom (un)marshaling etc, just use http to make life easier
+- use boltdb for persistent storage, focus here is to learn about the distributed part, not the kv store part
+
+*/
