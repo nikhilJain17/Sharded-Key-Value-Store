@@ -17,7 +17,7 @@ package main
 
 import (
 	// // "html/template"
-	// // "io/ioutil"
+	"io/ioutil"
 	"log"
 	"net/http"
 	// // "regexp"
@@ -46,47 +46,69 @@ func main() {
 	}
 	fmt.Println(follower)
 	go followerInit(&follower) // start up the follower server to listen to http requests
+	
+	// do we want the heartbeat to be a separate goroutine? 
+	// the issue is we need a handler for client requests
+	// and we can't have the heartbeat block the thread...so yes?
+	// i also dont know how the handler thing works, like if i set something as a handler,
+	// will it run in a new thread each time?
+	// @todo look into that.
+
+	// server loop
+	setupLeaderServer()
+	go http.ListenAndServe(":5000", nil)
+
+	
 	// heartbeat loop 
-	fmt.Println("hi")
-
-	hc := http.Client{}
 	for true {
-		// send post request to heartbeat
-
-		form := url.Values{}
-		form.Add("heartbeat", "true")
-		req, err := http.NewRequest("POST", "http://127.0.0.1:8080/heartbeat", strings.NewReader(form.Encode()))
-		if err != nil {
-			log.Fatal(err)
-		}
-		resp, err := hc.Do(req)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Println(resp) // print the heartbeat ack
-
-		
-		// sleep
-		time.Sleep(5 * time.Second)
-	} 
+		heartbeat()
+	}
 	
 }
 
-// hc := http.Client{}
-// req, err := http.NewRequest("POST", APIURL, nil)
 
-// form := url.Values{}
-// form.Add("heartbeat", "true")
-// req, err := http.NewRequest("POST", url, strings.NewReader(form.Encode()))
+func setupLeaderServer() {
+	// client http handlers
+	http.HandleFunc("/sankruth", func (w http.ResponseWriter, r *http.Request) {
+		// @todo
+		log.Println("yo quit calling on my endpoints dawg")
+		fmt.Fprintf(w, "hello world")
 
-// req.PostForm = form
+	})
+}
 
-// glog.Info("form was %v", form)
-// resp, err := hc.Do(req)
+func heartbeat() {
+	hc := http.Client{}
+	
+	// send post request to heartbeat
+	form := url.Values{}
+	form.Add("heartbeat", "true")
+	req, err := http.NewRequest("POST", "http://127.0.0.1:8080/heartbeat", strings.NewReader(form.Encode()))
+	if err != nil {
+		log.Fatal(err)
+	}
+	resp, err := hc.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
 
-// req, err := http.NewRequest("POST", url, strings.NewReader(form.Encode()))
+	if resp.StatusCode == http.StatusOK {
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		bodyString := string(bodyBytes)
+		log.Println(bodyString)
+	}
+			
+	// sleep
+	time.Sleep(5 * time.Second)
+	
+}
 
-// curl -d "heartbeat=true" -H "Content-Type: application/x-www-form-urlencoded" -X POST http://127.0.0.1:8080/heartbeat
+// follower:
+// curl -d "value=me&key=name" -H "Content-Type: application/x-www-form-urlencoded" -X POST http://127.0.0.1:8080/put
 
-
-
+// leader:
+// curl http://127.0.0.1:8001/test
