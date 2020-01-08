@@ -18,14 +18,16 @@ package main
 import (
 	// // "html/template"
 	// // "io/ioutil"
-	// "log"
-	// "net/http"
+	"log"
+	"net/http"
 	// // "regexp"
 	"fmt"
 	// // "encoding/gob"
 	// // "bytes"
 	// "github.com/boltdb/bolt"
-	// "time" 
+	"time" 
+	"strings"
+	"net/url"
 )
 
 type Follower struct {
@@ -43,9 +45,48 @@ func main() {
 		URL : ":8080",
 	}
 	fmt.Println(follower)
-	followerInit(&follower)
+	go followerInit(&follower) // start up the follower server to listen to http requests
+	// heartbeat loop
+	fmt.Println("hi")
+
+	hc := http.Client{}
+	for true {
+		// send post request to heartbeat
+
+		form := url.Values{}
+		form.Add("heartbeat", "true")
+		req, err := http.NewRequest("POST", "http://127.0.0.1:8080/heartbeat", strings.NewReader(form.Encode()))
+		if err != nil {
+			log.Fatal(err)
+		}
+		resp, err := hc.Do(req)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println(resp) // print the heartbeat ack
+
+		
+		// sleep
+		time.Sleep(5 * time.Second)
+	} 
 	
 }
+
+// hc := http.Client{}
+// req, err := http.NewRequest("POST", APIURL, nil)
+
+// form := url.Values{}
+// form.Add("heartbeat", "true")
+// req, err := http.NewRequest("POST", url, strings.NewReader(form.Encode()))
+
+// req.PostForm = form
+
+// glog.Info("form was %v", form)
+// resp, err := hc.Do(req)
+
+// req, err := http.NewRequest("POST", url, strings.NewReader(form.Encode()))
+
+// curl -d "heartbeat=true" -H "Content-Type: application/x-www-form-urlencoded" -X POST http://127.0.0.1:8080/heartbeat
 
 
 
