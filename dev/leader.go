@@ -46,7 +46,7 @@ func main() {
 	}
 	fmt.Println(follower)
 	go followerInit(&follower) // start up the follower server to listen to http requests
-	// heartbeat loop
+	// heartbeat loop 
 	fmt.Println("hi")
 
 	hc := http.Client{}

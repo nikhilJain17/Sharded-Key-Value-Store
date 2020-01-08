@@ -119,6 +119,11 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	
 }
 
+func heartbeatHandler(w http.ResponseWriter, r *http.Request) {
+	// @todo 
+	fmt.Fprintf(w, "ack")
+}
+
 func followerInit(f *Follower) {
 
 	/* set up boltdb */
@@ -137,6 +142,7 @@ func followerInit(f *Follower) {
 	http.HandleFunc("/get", getHandler)
 	http.HandleFunc("/put", putHandler)
 	http.HandleFunc("/delete", deleteHandler)
+	http.HandleFunc("/heartbeat", heartbeatHandler)
 
 	http.ListenAndServe(f.URL, nil)
 }
