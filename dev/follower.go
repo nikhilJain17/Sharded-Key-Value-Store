@@ -121,7 +121,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 
 func heartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	// @todo 
-	fmt.Fprintf(w, "ack")
+	fmt.Fprintf(w, "ack\n")
 	
 	// if get, then do get but if put, then do put
 	err := r.ParseForm()
@@ -145,6 +145,13 @@ func heartbeatHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+
+	if reqType == "GET" {
+		getHandler(w, r)
+	} else if reqType == "PUT" {
+		putHandler(w, r)
+	}
+
 	log.Println("[heartbeat client] key:", key, "value:", value, "reqType:", reqType)
 }
 

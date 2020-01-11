@@ -164,7 +164,7 @@ func heartbeat(heartbeatChannel chan Request) {
 			log.Fatal(err)
 		}
 		bodyString := string(bodyBytes)
-		log.Println("[heartbeat reply leader]:",bodyString)
+		log.Println("[heartbeat reply in leader]:", bodyString)
 	}
 			
 	// sleep
