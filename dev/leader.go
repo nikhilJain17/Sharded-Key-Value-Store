@@ -26,7 +26,7 @@ import (
 	// // "bytes"
 	// "github.com/boltdb/bolt"
 	"time" 
-	"strings"
+	// "strings"
 	"net/url"
 )
 
@@ -80,8 +80,8 @@ func setupLeaderServer(heartbeatChannel chan Request) {
 	// client http handlers
 	http.HandleFunc("/getLeader", func (w http.ResponseWriter, r *http.Request) {
 		// @todo
-		log.Println("get on Leader")
-		fmt.Fprintf(w, "hello world")
+		// log.Println("get on Leader")
+		fmt.Fprintf(w, "getting")
 
 		// send whatever client sent thru the heartbeatChannel
 		err := r.ParseForm()
@@ -96,33 +96,63 @@ func setupLeaderServer(heartbeatChannel chan Request) {
 				}
 			}
 		}
-		log.Println("[get] key:", key)
+		log.Println("[leaderGet] key:", key)
 
 		heartbeatChannel <- Request{Type : "GET", Kvpair : KVPair{Key : key}, Key : key,} // @todo sending empty kvpair?
-		
+	})
 
+
+	http.HandleFunc("/putLeader", func (w http.ResponseWriter, r *http.Request) {
+		// @todo
+		fmt.Fprintf(w, "putting")
+
+		// send whatever client sent thru the heartbeatChannel
+		err := r.ParseForm()
+		if err != nil {
+			log.Fatal(err)
+		}	
+		var key string 
+		var value string 
+		for formKey, formValues := range r.Form {
+			for _, formVal := range formValues { // @todo make sure length of values is one
+				if string(formKey) == "key" {
+					key = formVal
+				}
+				if string(formKey) == "value" {
+					value = formVal
+				}
+			}
+		}
+		log.Println("[leaderPut] key:", key, "value:", value)
+
+		heartbeatChannel <- Request{Type : "PUT", Kvpair : KVPair{Key : key, Value : value}, Key : key,} // @todo sending empty kvpair?
 	})
 }
 
 func heartbeat(heartbeatChannel chan Request) {	
-	hc := http.Client{}
+	// hc := http.Client{}
+	form := url.Values{}
+
+	// appendArgs := false
 
 	// non blocking channels for the heartbeat!
 	select {
 	case leaderReq := <- heartbeatChannel:
-		log.Println(leaderReq, "channel!")
+		log.Println("made it into the channel:", leaderReq)
+		form.Add("key", leaderReq.Kvpair.Key)
+		form.Add("value", leaderReq.Kvpair.Value)
+		form.Add("type", leaderReq.Type)
+		
 	default:
 		log.Println("nothing yet")
 	}
 
-	// send post request to heartbeat
-	form := url.Values{}
+	log.Println("heartbeat form:", form)
+
+	// send post request to heartbeat WITH request data if applicable @todo
 	form.Add("heartbeat", "true")
-	req, err := http.NewRequest("POST", "http://127.0.0.1:8080/heartbeat", strings.NewReader(form.Encode()))
-	if err != nil {
-		log.Fatal(err)
-	}
-	resp, err := hc.Do(req)
+	
+	resp, err := http.PostForm("http://127.0.0.1:8080/heartbeat", form)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -134,7 +164,7 @@ func heartbeat(heartbeatChannel chan Request) {
 			log.Fatal(err)
 		}
 		bodyString := string(bodyBytes)
-		log.Println(bodyString)
+		log.Println("[heartbeat reply leader]:",bodyString)
 	}
 			
 	// sleep

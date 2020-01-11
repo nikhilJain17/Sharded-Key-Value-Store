@@ -39,7 +39,7 @@ func getHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	log.Println("[get] key: ", key)
+	log.Println("[followerGet] key: ", key)
 	
 	/* now get from persistent storage */
 
@@ -122,6 +122,30 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 func heartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	// @todo 
 	fmt.Fprintf(w, "ack")
+	
+	// if get, then do get but if put, then do put
+	err := r.ParseForm()
+	if err != nil {
+		log.Fatal(err)
+	}
+	var key string 
+	var value string 
+	var reqType string 
+
+	for formKey, formValues := range r.Form {
+		for _, formVal := range formValues { // @todo make sure length of values is one
+			if string(formKey) == "key" {
+				key = formVal
+			}
+			if string(formKey) == "value" {
+				value = formVal
+			}
+			if string(formKey) == "type" {
+				reqType = formVal
+			}
+		}
+	}
+	log.Println("[heartbeat client] key:", key, "value:", value, "reqType:", reqType)
 }
 
 func followerInit(f *Follower) {
