@@ -6,9 +6,12 @@ Once the leader is elected...
 > the client sends a change to the leader
 > change is appended to leader's log
 > change is sent to followers on next heartbeat
+	> client puts it on their log
 > response is sent to client
 	> an entry is "committed" if a majority of followers ack that shite
-	> else it's an abort or some shite
+	> else it's an abort 
+
+> when theres a new leader elected, we roll back uncommitted logs
 
 todo: something for network partitions and elections or whatever, i think just implement elections and things will be fine
 */
@@ -42,24 +45,58 @@ type Request struct {
 	Key string // for get, delete
 }
 
-func main() {
-	fmt.Println("hello")
-	// var followers []Follower
-	follower := Follower {
-		UID : "a humble test",
-		DBFilename : "kvstore.db",
-		URL : ":8080",
-	}
-	fmt.Println(follower)
-	go followerInit(&follower) // start up the follower server to listen to http requests
-	
-	// do we want the heartbeat to be a separate goroutine? 
-	// the issue is we need a handler for client requests
-	// and we can't have the heartbeat block the thread...so yes?
-	// i also dont know how the handler thing works, like if i set something as a handler,
-	// will it run in a new thread each time?
-	// @todo look into that.
+type LogEntry struct {
+	UID string
+	Timestamp time.Time
+	Status string // abort or committed
+	Req Request// @todo
+}
 
+func setupFollowers(numFollowers int) {
+	var urls [3]string
+	urls[0] = ":8080"
+	urls[1] = ":8081"
+	urls[2] = ":8082"
+	var db [3]string
+	db[0] = "kvstore0.db"
+	db[1] = "kvstore1.db"
+	db[2] = "kvstore2.db"
+	for i := 0; i < 3; i++ {
+		follower := Follower {
+			UID : string(i),
+			DBFilename : db[i],
+			URL : urls[i],
+		}	
+		followerInit(&follower) // start up the follower server to listen to http requests
+	}
+}
+
+func main() {
+	// get follower servers up and running
+	fmt.Println("hello")
+	go setupFollowers(1)
+	// var urls [3]string
+	// urls[0] = ":8080"
+	// urls[1] = ":8081"
+	// urls[2] = ":8082"
+	// var db [3]string
+	// db[0] = "kvstore0.db"
+	// db[1] = "kvstore1.db"
+	// db[2] = "kvstore2.db"
+	// for i := 0; i < 3; i++ {
+	// 	follower := Follower {
+	// 		UID : string(i),
+	// 		DBFilename : db[i],
+	// 		URL : urls[i],
+	// 	}	
+	// 	followerInit(&follower) // start up the follower server to listen to http requests
+	// }
+
+	// set up log for leader
+	log := make ([]LogEntry, 1)
+	log = append(log, LogEntry{UID : "leader", Timestamp : time.Now(), Status : "initial", })
+	
+	// > set up server stuff for leader
 	heartbeatChannel := make(chan Request)
 
 	// server loop
@@ -67,7 +104,7 @@ func main() {
 	go http.ListenAndServe(":5000", nil)
 
 	// wait until follower is up to send heartbeats
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 	// heartbeat loop 
 	for true {
 		heartbeat(heartbeatChannel)
@@ -77,10 +114,18 @@ func main() {
 
 
 func setupLeaderServer(heartbeatChannel chan Request) {
+
+	// Once the leader is elected...
+	// > the client sends a change to the leader
+	// > change is appended to leader's log
+	// > change is sent to followers on next heartbeat
+	// > response is sent to client
+	// 	> an entry is "committed" if a majority of followers ack that shite
+	// 	> else it's an abort 
+		
+
 	// client http handlers
 	http.HandleFunc("/getLeader", func (w http.ResponseWriter, r *http.Request) {
-		// @todo
-		// log.Println("get on Leader")
 		fmt.Fprintf(w, "getting")
 
 		// send whatever client sent thru the heartbeatChannel
@@ -152,20 +197,28 @@ func heartbeat(heartbeatChannel chan Request) {
 	// send post request to heartbeat WITH request data if applicable @todo
 	form.Add("heartbeat", "true")
 	
-	resp, err := http.PostForm("http://127.0.0.1:8080/heartbeat", form)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		bodyBytes, err := ioutil.ReadAll(resp.Body)
+	// send to all followers
+	var urls [3]string
+	urls[0] = "http://127.0.0.1:8080/heartbeat"
+	urls[1] = "http://127.0.0.1:8081/heartbeat"
+	urls[2] = "http://127.0.0.1:8082/heartbeat"
+	for i := 0; i < 3; i++ {
+		resp, err := http.PostForm(urls[i], form)
 		if err != nil {
 			log.Fatal(err)
 		}
-		bodyString := string(bodyBytes)
-		log.Println("[heartbeat reply in leader]:", bodyString)
+		defer resp.Body.Close()
+	
+		if resp.StatusCode == http.StatusOK {
+			bodyBytes, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+			bodyString := string(bodyBytes)
+			log.Println("[heartbeat reply in leader]:", bodyString)
+		}
 	}
+
 			
 	// sleep
 	time.Sleep(5 * time.Second)

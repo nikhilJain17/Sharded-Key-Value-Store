@@ -183,5 +183,5 @@ Some random notes:
 
 - forget using rpc and custom (un)marshaling etc, just use http to make life easier
 - use boltdb for persistent storage, focus here is to learn about the distributed part, not the kv store part
-
+- in memory log for now, will change later 
 */
