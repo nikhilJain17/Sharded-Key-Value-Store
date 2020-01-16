@@ -13,11 +13,6 @@ import (
 	"time"
 )
 
-type KVPair struct {
-	Key string
-	Value string
-}
-
 var db *bolt.DB
 
 func testHandler(w http.ResponseWriter, r *http.Request) {
@@ -155,6 +150,10 @@ func heartbeatHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("[heartbeat client] key:", key, "value:", value, "reqType:", reqType)
 }
 
+func helloHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "hello")	
+}
+
 func followerInit(f *Follower) {
 
 	/* set up boltdb */
@@ -164,18 +163,21 @@ func followerInit(f *Follower) {
 	if err != nil {log.Fatal("error opening boltdb: ", err, "client: ", f)}
 	defer db.Close() // defer is pretty handy
 
+	log.Println("setting up follower:", f)
+
+
+	server := http.NewServeMux()
+
 	// hello world handler
-    http.HandleFunc("/", func (w http.ResponseWriter, r *http.Request) {
-        fmt.Fprintf(w, "Welcome to my website!")
-	})
+    server.HandleFunc("/", helloHandler)
 
-	http.HandleFunc("/test", testHandler)
-	http.HandleFunc("/get", getHandler)
-	http.HandleFunc("/put", putHandler)
-	http.HandleFunc("/delete", deleteHandler)
-	http.HandleFunc("/heartbeat", heartbeatHandler)
+	server.HandleFunc("/test", testHandler)
+	server.HandleFunc("/get", getHandler)
+	server.HandleFunc("/put", putHandler)
+	server.HandleFunc("/delete", deleteHandler)
+	server.HandleFunc("/heartbeat", heartbeatHandler)
 
-	http.ListenAndServe(f.URL, nil)
+	http.ListenAndServe(f.URL, server)
 }
 
 /*

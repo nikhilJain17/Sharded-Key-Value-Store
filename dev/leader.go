@@ -33,85 +33,6 @@ import (
 	"net/url"
 )
 
-type Follower struct {
-	UID string
-	DBFilename string
-	URL string
-}
-
-type Request struct {
-	Type string // GET, PUT, DELETE (@todo make this an enum?)
-	Kvpair KVPair // for put 
-	Key string // for get, delete
-}
-
-type LogEntry struct {
-	UID string
-	Timestamp time.Time
-	Status string // abort or committed
-	Req Request// @todo
-}
-
-func setupFollowers(numFollowers int) {
-	var urls [3]string
-	urls[0] = ":8080"
-	urls[1] = ":8081"
-	urls[2] = ":8082"
-	var db [3]string
-	db[0] = "kvstore0.db"
-	db[1] = "kvstore1.db"
-	db[2] = "kvstore2.db"
-	for i := 0; i < 3; i++ {
-		follower := Follower {
-			UID : string(i),
-			DBFilename : db[i],
-			URL : urls[i],
-		}	
-		followerInit(&follower) // start up the follower server to listen to http requests
-	}
-}
-
-func main() {
-	// get follower servers up and running
-	fmt.Println("hello")
-	go setupFollowers(1)
-	// var urls [3]string
-	// urls[0] = ":8080"
-	// urls[1] = ":8081"
-	// urls[2] = ":8082"
-	// var db [3]string
-	// db[0] = "kvstore0.db"
-	// db[1] = "kvstore1.db"
-	// db[2] = "kvstore2.db"
-	// for i := 0; i < 3; i++ {
-	// 	follower := Follower {
-	// 		UID : string(i),
-	// 		DBFilename : db[i],
-	// 		URL : urls[i],
-	// 	}	
-	// 	followerInit(&follower) // start up the follower server to listen to http requests
-	// }
-
-	// set up log for leader
-	log := make ([]LogEntry, 1)
-	log = append(log, LogEntry{UID : "leader", Timestamp : time.Now(), Status : "initial", })
-	
-	// > set up server stuff for leader
-	heartbeatChannel := make(chan Request)
-
-	// server loop
-	setupLeaderServer(heartbeatChannel)
-	go http.ListenAndServe(":5000", nil)
-
-	// wait until follower is up to send heartbeats
-	time.Sleep(5 * time.Second)
-	// heartbeat loop 
-	for true {
-		heartbeat(heartbeatChannel)
-	}
-	
-}
-
 
 func setupLeaderServer(heartbeatChannel chan Request) {
 
@@ -199,9 +120,9 @@ func heartbeat(heartbeatChannel chan Request) {
 	
 	// send to all followers
 	var urls [3]string
-	urls[0] = "http://127.0.0.1:8080/heartbeat"
-	urls[1] = "http://127.0.0.1:8081/heartbeat"
-	urls[2] = "http://127.0.0.1:8082/heartbeat"
+	urls[0] = "http://localhost:8000/heartbeat"
+	urls[1] = "http://16a2a699.ngrok.io/heartbeat"
+	urls[2] = "http://5db046fd.ngrok.io/heartbeat"
 	for i := 0; i < 3; i++ {
 		resp, err := http.PostForm(urls[i], form)
 		if err != nil {
